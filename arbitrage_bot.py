@@ -852,6 +852,12 @@ def build_pools_and_assets(terra):
                           decimals=config.ELPACO_DECIMALS, display="ELPACO")
     rotti_token = Asset(kind="cw20", id=config.ROTTI_CW20_ADDRESS,
                          decimals=config.ROTTI_DECIMALS, display="ROTTI")
+    tnews_token = Asset(kind="cw20", id=config.TNEWS_CW20_ADDRESS,
+                         decimals=config.TNEWS_DECIMALS, display="TNEWS")
+    degenap_token = Asset(kind="cw20", id=config.DEGENAP_CW20_ADDRESS,
+                           decimals=config.DEGENAP_DECIMALS, display="DEGENAP")
+    idev_token = Asset(kind="cw20", id=config.IDEV_CW20_ADDRESS,
+                        decimals=config.IDEV_DECIMALS, display="IDEV")
 
     pools = [
         DexPool(config.TERRASWAP_POOL_1_NAME, terra, config.TERRASWAP_POOL_1,
@@ -1411,12 +1417,80 @@ def build_pools_and_assets(terra):
         GarudaPool("Garuda ROTTI/GRDX", terra, config.GARUDA_POOL_ROTTI_GRDX,
                     rotti_token, grdx_token, config.GARUDA_COMMISSION_RATE),
 
+        # --- TNEWS, DEGENAP, IDEV — ADDED 2026-09-03, another user-supplied
+        # batch. DFC/LUNC "no dex visible" from this same batch was NOT a
+        # new pool — same address already on file as LUNC_DFC_POOL_UNKNOWN
+        # (see that parked entry above); RE-CONFIRMED PARKED 2026-09-03 via
+        # smoke_test_tnews_degenap_idev_dfc_terrapump.py's probe — same
+        # fee_rate=3300/lp_stake_contract anomaly as the original 2026-08-29
+        # finding, unchanged. Venues here are Terraport and Garuda DeFi
+        # (both already-trusted) except one: Terra.pump — see the PARKED
+        # entry below, still not wired in.
+        #
+        # SMOKE-TESTED 2026-09-03 — see config.py's comments above
+        # DEGENAP_TRANSFER_TAX_BPS / TNEWS_TRANSFER_TAX_BPS /
+        # IDEV_TRANSFER_TAX_BPS for the confirmed numbers (all three: 0bps,
+        # confirmed via 2-4 independent legs each). 11 of these 12 pools
+        # completed a full real round trip cleanly. The other 1:
+        #   - Garuda USTC/DEGENAP: NOT confirmed — its min_receive
+        #     computation failed client-side before broadcasting anything
+        #     (aborted safely, no funds at risk, no negative evidence about
+        #     the pool itself). DEGENAP's own tax is still solidly
+        #     confirmed via its other 3 legs (all through Terraport). Re-run
+        #     the smoke test to get a real confirmation on this specific
+        #     pool before sizing trades through it.
+        DexPool("Terraport DEGENAP/USTC", terra, config.TERRAPORT_POOL_DEGENAP_USTC,
+                 degenap_token, ustc, config.TERRAPORT_COMMISSION_RATE),
+        DexPool("Terraport DEGENAP/LUNC", terra, config.TERRAPORT_POOL_DEGENAP_LUNC,
+                 degenap_token, lunc, config.TERRAPORT_COMMISSION_RATE),
+        DexPool("Terraport DEGENAP/GRDX", terra, config.TERRAPORT_POOL_DEGENAP_GRDX,
+                 degenap_token, grdx_token, config.TERRAPORT_COMMISSION_RATE),
+        DexPool("Terraport DEGENAP/TNEWS", terra, config.TERRAPORT_POOL_DEGENAP_TNEWS,
+                 degenap_token, tnews_token, config.TERRAPORT_COMMISSION_RATE),
+        GarudaPool("Garuda USTC/DEGENAP", terra, config.GARUDA_POOL_USTC_DEGENAP,
+                    ustc, degenap_token, config.GARUDA_COMMISSION_RATE),
+        DexPool("Terraport TNEWS/LUNC", terra, config.TERRAPORT_POOL_TNEWS_LUNC,
+                 tnews_token, lunc, config.TERRAPORT_COMMISSION_RATE),
+        GarudaPool("Garuda ELPACO/IDEV", terra, config.GARUDA_POOL_ELPACO_IDEV,
+                    elpaco_token, idev_token, config.GARUDA_COMMISSION_RATE),
+        GarudaPool("Garuda ELPACO/USTC", terra, config.GARUDA_POOL_ELPACO_USTC,
+                    elpaco_token, ustc, config.GARUDA_COMMISSION_RATE),
+        GarudaPool("Garuda ELPACO/JURIS", terra, config.GARUDA_POOL_ELPACO_JURIS,
+                    elpaco_token, juris_token, config.GARUDA_COMMISSION_RATE),
+        GarudaPool("Garuda ELPACO/GRDX", terra, config.GARUDA_POOL_ELPACO_GRDX,
+                    elpaco_token, grdx_token, config.GARUDA_COMMISSION_RATE),
+        GarudaPool("Garuda IDEV/LUNC", terra, config.GARUDA_POOL_IDEV_LUNC,
+                    idev_token, lunc, config.GARUDA_COMMISSION_RATE),
+        GarudaPool("Garuda IDEV/LTK", terra, config.GARUDA_POOL_IDEV_LTK,
+                    idev_token, ltk_token, config.GARUDA_COMMISSION_RATE),
+
+        # PARKED 2026-09-03 — Terra.pump TNEWS/LUNC. This venue has never
+        # been used anywhere in this bot before (zero prior references).
+        # PROBED 2026-09-03 via smoke_test_tnews_degenap_idev_dfc_terrapump.py
+        # — a DIFFERENT failure signal than LUNC_DFC_POOL_UNKNOWN's "extra
+        # fields" case: both {"pair":{}} and {"pool":{}} queries returned a
+        # flat HTTP 500 Internal Server Error from the LCD, not a malformed-
+        # but-parseable response. That could mean the contract genuinely
+        # doesn't implement either standard query (a pump.fun-style bonding-
+        # curve contract plausibly uses entirely different query names —
+        # e.g. something like {"get_pool_info":{}} — rather than the
+        # Terraswap-standard {"pair":{}}/{"pool":{}}), or it could be a
+        # transient/unrelated LCD indexing issue on this specific contract.
+        # Re-probing (ideally against a second LCD endpoint, or checking a
+        # block explorer for this address's actual accepted query messages)
+        # would distinguish the two — a plain schema-probe retry won't, if
+        # it's genuinely unsupported rather than transient. Not urgent —
+        # TNEWS/LUNC already has a confirmed-trusted route via Terraport
+        # (TERRAPORT_POOL_TNEWS_LUNC above).
+        # DexPool("Terra.pump TNEWS/LUNC", terra, config.TERRAPUMP_POOL_TNEWS_LUNC,
+        #          tnews_token, lunc, config.TERRASWAP_COMMISSION_RATE),
+
     ]
 
     assets_to_check = [lunc, ustc, terra_token, lcw_token, mir_token, astro_token, trit_token,
                         juris_token, usdc_axl, usdc, rev_token, future_token, amplunc_token,
                         bon_token, moon_token, jeff_token, dfc_token, lix_token, ltk_token,
-                        elpaco_token, rotti_token]
+                        elpaco_token, rotti_token, tnews_token, degenap_token, idev_token]
     return pools, assets_to_check, lunc, ustc
 
 

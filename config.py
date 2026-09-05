@@ -760,28 +760,6 @@ ROTTI_TRANSFER_TAX_BPS = _int("ROTTI_TRANSFER_TAX_BPS", "0")   # CONFIRMED 0bps 
 # Garuda, LUNC->ROTTI via Terraport, FUN->ROTTI, JURIS->ROTTI, GRDX->ROTTI) all showed exactly
 # 0.00 bps gap. Sell legs (ROTTI->LUNC via both venues) showed the usual ~150bps gap fully
 # explained by native LUNC stability tax — no ROTTI-side tax either direction.
-DEGENAP_TRANSFER_TAX_BPS = _int("DEGENAP_TRANSFER_TAX_BPS", "0")  # CONFIRMED 0bps 2026-09-03
-# via smoke_test_tnews_degenap_idev_dfc_terrapump.py — FOUR independent buy legs into DEGENAP
-# (LUNC->DEGENAP via Terraport, USTC->DEGENAP via Terraport, GRDX->DEGENAP via Terraport,
-# TNEWS->DEGENAP via Terraport) all showed exactly 0.00 bps gap. Sell legs (DEGENAP->LUNC,
-# DEGENAP->USTC) showed the usual ~150bps gap fully explained by native stability tax;
-# DEGENAP->GRDX showed 0.00bps (GRDX already confirmed 0bps). Note: the Garuda USTC/DEGENAP
-# pool itself did NOT get a real transaction this run — its min_receive computation failed
-# client-side before broadcasting anything (aborted safely, no funds at risk) — so while
-# DEGENAP's own tax is solidly confirmed via the other 4 legs, that SPECIFIC pool's venue
-# mechanics remain unconfirmed. Re-run the smoke test to get a real confirmation on it before
-# sizing trades through it specifically.
-TNEWS_TRANSFER_TAX_BPS = _int("TNEWS_TRANSFER_TAX_BPS", "0")   # CONFIRMED 0bps 2026-09-03 via
-# smoke_test_tnews_degenap_idev_dfc_terrapump.py — TWO independent buy legs into TNEWS
-# (LUNC->TNEWS via Terraport, DEGENAP->TNEWS via Terraport) both showed exactly 0.00 bps gap.
-# Sell leg (TNEWS->LUNC) showed the usual ~150bps gap fully explained by native stability tax.
-IDEV_TRANSFER_TAX_BPS = _int("IDEV_TRANSFER_TAX_BPS", "0")    # CONFIRMED 0bps 2026-09-03 via
-# smoke_test_tnews_degenap_idev_dfc_terrapump.py — THREE independent buy legs into IDEV
-# (ELPACO->IDEV via Garuda, LUNC->IDEV via Garuda, LTK->IDEV via Garuda) all showed exactly
-# 0.00 bps gap. Sell leg (IDEV->LUNC) showed the usual ~150bps native stability tax; IDEV->LTK
-# showed ~20bps, which matches LTK's OWN already-confirmed buy tax exactly (see
-# LTK_TRANSFER_TAX_IN_BPS) — that gap belongs to LTK, not IDEV, same pattern as ELPACO->LTK
-# before it.
 
 # DIRECTIONAL transfer tax rates — ADDED 2026-08-05 (round 3), CORRECTED
 # 2026-08-05 (round 5), EXTENDED 2026-09-02 with LIX and LTK. Every
@@ -904,9 +882,6 @@ def cw20_transfer_tax_rate(contract_addr: str, direction: str = None) -> Decimal
         ROTTI_CW20_ADDRESS: ROTTI_TRANSFER_TAX_BPS,
         LIX_CW20_ADDRESS: LIX_TRANSFER_TAX_BPS,
         LTK_CW20_ADDRESS: LTK_TRANSFER_TAX_BPS,
-        DEGENAP_CW20_ADDRESS: DEGENAP_TRANSFER_TAX_BPS,
-        TNEWS_CW20_ADDRESS: TNEWS_TRANSFER_TAX_BPS,
-        IDEV_CW20_ADDRESS: IDEV_TRANSFER_TAX_BPS,
     }
     bps = rates.get(contract_addr, 0)
     return Decimal(bps) / Decimal(10000)
@@ -1119,7 +1094,7 @@ MIN_PROFIT_UUSD = _int("MIN_PROFIT_UUSD", "50000")
 # against a bad real-world outcome comes from how much bigger this number
 # is than your typical real gas cost.
 
-MIN_PROFIT_ULUNA = _int("MIN_PROFIT_ULUNA", "10000000")  # ~50 LUNC, after tax and gas
+MIN_PROFIT_ULUNA = _int("MIN_PROFIT_ULUNA", "50000000")  # ~50 LUNC, after tax and gas
 # Cycles that START in LUNC are judged directly against this uluna floor
 # instead of being converted to uusd and compared against MIN_PROFIT_UUSD.
 # LUNC's low per-unit uusd price means that conversion silently demanded
@@ -1522,58 +1497,6 @@ TERRASWAP_POOL_LUNC_LTK = os.getenv("TERRASWAP_POOL_LUNC_LTK", "terra1h4punhthc5
 TERRAPORT_POOL_ROTTI_LUNC = os.getenv("TERRAPORT_POOL_ROTTI_LUNC", "terra1u5tl9hf3q5uhtch5xan5rkf0w9awzn0klwffsphupykafm52n6jqr3ns8y")
 
 
-# --- TNEWS, DEGENAP, IDEV — ADDED 2026-09-03, another user-supplied batch.
-# DFC/LUNC "no dex visible" (terra14p6vgwa6pt9wmxp7t54ly4ujk8cc4kehvc4dttztutpd0hmtjkns5dl0ad)
-# from this same batch is NOT a new pool — it's the exact address already
-# on file as LUNC_DFC_POOL_UNKNOWN above (added 2026-08-29), investigated
-# and deliberately left disabled (its {"pair":{}} response has extra
-# "fee_rate"/"lp_stake_contract" fields no plain Terraswap/Terraport pool
-# has — unknown fork, unconfirmed fee model). No change needed there; see
-# that comment block for the full writeup.
-#
-# Decimals assumed 6 for all three new tokens (unconfirmed, but this is a
-# Terra Classic-wide constant so far). Transfer tax left unset (implicit
-# 0bps) — none of these three has a real smoke-tested round trip yet.
-TNEWS_DECIMALS = _int("TNEWS_DECIMALS", "6")
-TNEWS_CW20_ADDRESS = os.getenv("TNEWS_CW20_ADDRESS", "terra1ldxkxrtpd85wyfstenjzt8vgyv8vdjgd3t0nwu38sqh4wx6h2wksh9ule8")
-
-DEGENAP_DECIMALS = _int("DEGENAP_DECIMALS", "6")
-DEGENAP_CW20_ADDRESS = os.getenv("DEGENAP_CW20_ADDRESS", "terra1cstkhheqvklg82vm5qgyaktlulja7y0d0547mpfnf68qtesd8ams9xd4m0")
-
-IDEV_DECIMALS = _int("IDEV_DECIMALS", "6")
-IDEV_CW20_ADDRESS = os.getenv("IDEV_CW20_ADDRESS", "terra1jk858n7t29llucje6c8dhwslrz9x424u2l6mw3hxjfljt65pcf3s9q2vzm")
-
-# Terra.pump — a venue this bot has NEVER traded on before (zero prior
-# references anywhere in this file). Following the same discipline as the
-# LUNC_DFC_POOL_UNKNOWN and WESO "reflective" pair_type cases above: an
-# unfamiliar venue's message/query schema is NOT assumed to be plain
-# Terraswap-standard just because it quacks like a DEX. This address is
-# recorded here so it's on file and ready, but it is NOT wired into
-# build_pools_and_assets() below — see the matching commented-out block
-# there. Needs a real check_new_venues_interface.py / probe_garuda_schema.py
-# -style pass (or equivalent manual {"pair":{}} / {"pool":{}} query) to
-# confirm its actual pair_type/response shape before it's trusted with
-# real funds. TNEWS/LUNC already has a second, already-trusted route via
-# Terraport (TERRAPORT_POOL_TNEWS_LUNC below), so there's no urgency.
-TERRAPUMP_POOL_TNEWS_LUNC = os.getenv("TERRAPUMP_POOL_TNEWS_LUNC", "terra1gh6wnk9cefm7pgdprrm5yep4sljfkj6spzhmudkq0xe053lglz5s93udvj")
-
-# Terraport pools — already-trusted venue.
-TERRAPORT_POOL_DEGENAP_USTC = os.getenv("TERRAPORT_POOL_DEGENAP_USTC", "terra1qtv0suu5ckftfk6ytj8t898cer58x7wtr3zpewtmr5l0u29t9fpscmz4h3")
-TERRAPORT_POOL_DEGENAP_LUNC = os.getenv("TERRAPORT_POOL_DEGENAP_LUNC", "terra16lfeye76tucecxfullnvncqn5cdf8qp7dezkf9zvj7f4ukl3ed7q040w6g")
-TERRAPORT_POOL_DEGENAP_GRDX = os.getenv("TERRAPORT_POOL_DEGENAP_GRDX", "terra1a35ycz8lfmwru27qelx2aerc7mn7z7hpd9phjcyq9u7fay57aw9sm3ramt")
-TERRAPORT_POOL_DEGENAP_TNEWS = os.getenv("TERRAPORT_POOL_DEGENAP_TNEWS", "terra1ae7qzwzdch7ckz5mq0e76kreqf3f78t772dzqcvadnne2jz305jqhz60rm")
-TERRAPORT_POOL_TNEWS_LUNC = os.getenv("TERRAPORT_POOL_TNEWS_LUNC", "terra1lvcdvntl6xqlk0zrnpqmhs8lazlevmd9ss6t9gzuqnl362q329nq9yffmj")
-
-# Garuda DeFi pools — already-trusted venue.
-GARUDA_POOL_USTC_DEGENAP = os.getenv("GARUDA_POOL_USTC_DEGENAP", "terra1ed49vlwhf0y8dyy7rqp7f9mdsd400ucrxnzp0wyr8cazqf8wusnqqr7gng")
-GARUDA_POOL_ELPACO_IDEV = os.getenv("GARUDA_POOL_ELPACO_IDEV", "terra1m45qvurghn87rzuwrcu0nzvnjxnn2nfassfeseqffek3ndykrzgq3enxma")
-GARUDA_POOL_ELPACO_USTC = os.getenv("GARUDA_POOL_ELPACO_USTC", "terra1u6wxj6hspzzfcwt3ncc4x9graz0wa5kj3xhakmx6p5py0tr2pgms2elfc7")
-GARUDA_POOL_ELPACO_JURIS = os.getenv("GARUDA_POOL_ELPACO_JURIS", "terra1h963xxescq58gar2s6g0y0f9ufglxasvkjz5sr95ls4aphv9gw8s7plpy7")
-GARUDA_POOL_ELPACO_GRDX = os.getenv("GARUDA_POOL_ELPACO_GRDX", "terra1mgjm20p9f2ncxklf7rpemap9c0d8rm5n8hshmcpv936zu4mmpfrswv39nq")
-GARUDA_POOL_IDEV_LUNC = os.getenv("GARUDA_POOL_IDEV_LUNC", "terra1qhzhgwqea45e92ltzjua3rhx3zsrs0tqh6pr8x2ts2kmu2qvnwds2qszmg")
-GARUDA_POOL_IDEV_LTK = os.getenv("GARUDA_POOL_IDEV_LTK", "terra1cfhh3urm6p2nmxewasung6cwtsny9av6vsl4w08pnr48m0t6zcaq79uc0e")
-
-
 def validate():
     missing = []
     if not MNEMONIC:
@@ -1788,42 +1711,8 @@ def validate():
         missing.append("TERRASWAP_POOL_LUNC_LTK")
     if not TERRAPORT_POOL_ROTTI_LUNC:
         missing.append("TERRAPORT_POOL_ROTTI_LUNC")
-    if not TNEWS_CW20_ADDRESS:
-        missing.append("TNEWS_CW20_ADDRESS")
-    if not DEGENAP_CW20_ADDRESS:
-        missing.append("DEGENAP_CW20_ADDRESS")
-    if not IDEV_CW20_ADDRESS:
-        missing.append("IDEV_CW20_ADDRESS")
-    # TERRAPUMP_POOL_TNEWS_LUNC intentionally NOT validated as required —
-    # same treatment as LUNC_DFC_POOL_UNKNOWN above: it's not wired into
-    # any live pool, so it shouldn't block startup if unset.
-    if not TERRAPORT_POOL_DEGENAP_USTC:
-        missing.append("TERRAPORT_POOL_DEGENAP_USTC")
-    if not TERRAPORT_POOL_DEGENAP_LUNC:
-        missing.append("TERRAPORT_POOL_DEGENAP_LUNC")
-    if not TERRAPORT_POOL_DEGENAP_GRDX:
-        missing.append("TERRAPORT_POOL_DEGENAP_GRDX")
-    if not TERRAPORT_POOL_DEGENAP_TNEWS:
-        missing.append("TERRAPORT_POOL_DEGENAP_TNEWS")
-    if not TERRAPORT_POOL_TNEWS_LUNC:
-        missing.append("TERRAPORT_POOL_TNEWS_LUNC")
-    if not GARUDA_POOL_USTC_DEGENAP:
-        missing.append("GARUDA_POOL_USTC_DEGENAP")
-    if not GARUDA_POOL_ELPACO_IDEV:
-        missing.append("GARUDA_POOL_ELPACO_IDEV")
-    if not GARUDA_POOL_ELPACO_USTC:
-        missing.append("GARUDA_POOL_ELPACO_USTC")
-    if not GARUDA_POOL_ELPACO_JURIS:
-        missing.append("GARUDA_POOL_ELPACO_JURIS")
-    if not GARUDA_POOL_ELPACO_GRDX:
-        missing.append("GARUDA_POOL_ELPACO_GRDX")
-    if not GARUDA_POOL_IDEV_LUNC:
-        missing.append("GARUDA_POOL_IDEV_LUNC")
-    if not GARUDA_POOL_IDEV_LTK:
-        missing.append("GARUDA_POOL_IDEV_LTK")
     if missing:
         raise SystemExit(
             "Missing/invalid required config: " + ", ".join(missing) +
             "\nFill these in your .env file before running."
         )
-        

@@ -1826,3 +1826,4 @@ def validate():
             "Missing/invalid required config: " + ", ".join(missing) +
             "\nFill these in your .env file before running."
         )
+        
